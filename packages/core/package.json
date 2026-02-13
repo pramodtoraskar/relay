@@ -1,0 +1,30 @@
+{
+  "name": "@relay/core",
+  "version": "0.1.0",
+  "description": "Relay MCP server - workflow tools, Jira and Git integration",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "relay-mcp": "dist/run-mcp.js"
+  },
+  "scripts": {
+    "build": "npx tsup src/index.ts src/run-mcp.ts --format cjs --dts --clean --sourcemap",
+    "dev": "tsup src/index.ts --format cjs --watch",
+    "test": "echo \"Run tests from repo root: npm test\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.6.7",
+    "better-sqlite3": "^12.6.0",
+    "nanoid": "^5.0.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

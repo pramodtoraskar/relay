@@ -1,0 +1,60 @@
+{
+  "name": "relay-vscode",
+  "displayName": "Relay",
+  "description": "AI-powered dev workflow: task handoffs, context preservation, team coordination",
+  "version": "0.1.0",
+  "publisher": "relay",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other", "Snippets"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "relay.checkin", "title": "Relay: Morning check-in" },
+      { "command": "relay.startTask", "title": "Relay: Start task" },
+      { "command": "relay.updateProgress", "title": "Relay: Update progress" },
+      { "command": "relay.completeTask", "title": "Relay: Complete task" },
+      { "command": "relay.createHandoff", "title": "Relay: Create handoff" },
+      { "command": "relay.endOfDay", "title": "Relay: End of day" }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "relay",
+          "title": "Relay",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "relay": [
+        {
+          "id": "relay.tasks",
+          "name": "Tasks"
+        },
+        {
+          "id": "relay.handoffs",
+          "name": "Handoffs"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Relay",
+      "properties": {
+        "relay.mcpPath": {
+          "type": "string",
+          "default": "relay-mcp",
+          "description": "Path to relay-mcp (or npx @relay/core)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "npx tsc -p .",
+    "watch": "tsc -p . -w"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.3"
+  }
+}

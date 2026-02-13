@@ -1,0 +1,26 @@
+module.exports = {
+  root: true,
+  env: { node: true, es2022: true },
+  parser: "@typescript-eslint/parser",
+  parserOptions: {
+    ecmaVersion: 2022,
+    sourceType: "module",
+    project: ["./tsconfig.json", "./packages/*/tsconfig.json"],
+    tsconfigRootDir: __dirname,
+  },
+  plugins: ["@typescript-eslint"],
+  extends: [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking",
+    "prettier",
+  ],
+  ignorePatterns: ["dist", "node_modules", "*.cjs", "*.mjs"],
+  overrides: [
+    {
+      files: ["**/*.test.ts", "**/*.spec.ts"],
+      env: { jest: true },
+      rules: { "@typescript-eslint/no-explicit-any": "off" },
+    },
+  ],
+};
