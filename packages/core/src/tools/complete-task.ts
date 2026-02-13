@@ -1,7 +1,7 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { WorkflowManager } from "../workflow-manager.js";
 
-export function completeTaskTool(wm: WorkflowManager): Tool {
+export function completeTaskTool(_wm: WorkflowManager): Tool {
   return {
     name: "complete_task",
     description:
@@ -29,7 +29,7 @@ export async function runCompleteTask(
     total_minutes?: number;
   }
 ): Promise<string> {
-  wm.completeTask(
+  await wm.completeTask(
     args.session_id,
     args.merge_request_url,
     args.total_minutes

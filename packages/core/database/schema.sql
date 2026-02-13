@@ -27,9 +27,9 @@ CREATE TABLE IF NOT EXISTS work_sessions (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_work_sessions_developer ON work_sessions(developer_id);
-CREATE INDEX idx_work_sessions_status ON work_sessions(status);
-CREATE INDEX idx_work_sessions_jira ON work_sessions(jira_issue_key);
+CREATE INDEX IF NOT EXISTS idx_work_sessions_developer ON work_sessions(developer_id);
+CREATE INDEX IF NOT EXISTS idx_work_sessions_status ON work_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_work_sessions_jira ON work_sessions(jira_issue_key);
 
 -- Micro-tasks (sub-tasks within a work session, AI or manual)
 CREATE TABLE IF NOT EXISTS micro_tasks (
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS micro_tasks (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_micro_tasks_session ON micro_tasks(work_session_id);
+CREATE INDEX IF NOT EXISTS idx_micro_tasks_session ON micro_tasks(work_session_id);
 
 -- File ownership (claim files to reduce conflicts)
 CREATE TABLE IF NOT EXISTS file_claims (
@@ -55,8 +55,8 @@ CREATE TABLE IF NOT EXISTS file_claims (
   UNIQUE(file_path)
 );
 
-CREATE INDEX idx_file_claims_session ON file_claims(work_session_id);
-CREATE INDEX idx_file_claims_path ON file_claims(file_path);
+CREATE INDEX IF NOT EXISTS idx_file_claims_session ON file_claims(work_session_id);
+CREATE INDEX IF NOT EXISTS idx_file_claims_path ON file_claims(file_path);
 
 -- Handoffs (context passed to another developer)
 CREATE TABLE IF NOT EXISTS handoffs (
@@ -76,9 +76,9 @@ CREATE TABLE IF NOT EXISTS handoffs (
   accepted_at TEXT
 );
 
-CREATE INDEX idx_handoffs_to ON handoffs(to_developer_id);
-CREATE INDEX idx_handoffs_from ON handoffs(from_developer_id);
-CREATE INDEX idx_handoffs_status ON handoffs(status);
+CREATE INDEX IF NOT EXISTS idx_handoffs_to ON handoffs(to_developer_id);
+CREATE INDEX IF NOT EXISTS idx_handoffs_from ON handoffs(from_developer_id);
+CREATE INDEX IF NOT EXISTS idx_handoffs_status ON handoffs(status);
 
 -- Progress log (time + notes linked to session)
 CREATE TABLE IF NOT EXISTS progress_logs (
@@ -90,7 +90,29 @@ CREATE TABLE IF NOT EXISTS progress_logs (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_progress_logs_session ON progress_logs(work_session_id);
+CREATE INDEX IF NOT EXISTS idx_progress_logs_session ON progress_logs(work_session_id);
+
+-- Context notes (workflow-specific notes, not Jira data)
+CREATE TABLE IF NOT EXISTS context_notes (
+  id TEXT PRIMARY KEY,
+  work_session_id TEXT REFERENCES work_sessions(id) ON DELETE CASCADE,
+  developer_id TEXT NOT NULL,
+  note TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_context_notes_session ON context_notes(work_session_id);
+CREATE INDEX IF NOT EXISTS idx_context_notes_developer ON context_notes(developer_id);
+
+-- Daily goals (workflow-specific, not Jira)
+CREATE TABLE IF NOT EXISTS daily_goals (
+  id TEXT PRIMARY KEY,
+  developer_id TEXT NOT NULL,
+  goal_date TEXT NOT NULL,
+  goal_text TEXT NOT NULL,
+  completed INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_daily_goals_developer_date ON daily_goals(developer_id, goal_date);
 
 -- Trigger: update updated_at
 CREATE TRIGGER IF NOT EXISTS developers_updated_at

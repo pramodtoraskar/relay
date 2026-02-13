@@ -23,6 +23,6 @@ Minimal Relay setup for an individual developer.
    - `npx relay eod` — end of day
    - `npx relay handoff --to $RELAY_DEVELOPER_ID --title "PROJ-99 next steps"` — hand off to *yourself* (use your own id so it shows at next checkin)
 
-4. **Cursor**: Add to `.cursor/mcp.json` (see docs/cursor-setup.md).
+4. **Cursor**: Add to `.cursor/mcp.json` (see docs/getting-started.md).
 
 Database: `~/.relay/relay.db` (or `RELAY_DB_PATH`).

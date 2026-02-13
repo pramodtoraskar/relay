@@ -17,13 +17,15 @@
     "test": "jest --config jest.config.js",
     "test:unit": "jest --config jest.config.js --testPathPattern=unit",
     "test:integration": "jest --config jest.config.js --testPathPattern=integration",
+    "test:e2e": "npm run build && sh tests/e2e/relay-human-ai-scenarios.sh",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
     "setup": "node scripts/setup.js",
     "migrate": "node scripts/migrate-db.js",
-    "relay": "relay"
+    "relay": "relay",
+    "dev": "npm run build && RELAY_JIRA_MCP_DISABLED=1 RELAY_GIT_MCP_DISABLED=1 RELAY_DB_PATH=/tmp/relay-dev.db node packages/cli/dist/index.js checkin"
   },
   "devDependencies": {
     "@relay/cli": "workspace:*",

@@ -21,7 +21,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 function runRelayCommand(cmd: string): void {
   const config = vscode.workspace.getConfiguration("relay");
-  const relayPath = config.get<string>("mcpPath", "relay-mcp");
+  const _relayPath = config.get<string>("mcpPath", "relay-mcp");
   const terminal = vscode.window.createTerminal({ name: "Relay", hideFromUser: false });
   terminal.show();
   if (cmd === "start") {

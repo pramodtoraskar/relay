@@ -60,3 +60,9 @@ When you need to pass work to someone else—or to **yourself** (e.g. end of day
 - **One active session** — Relay assumes one active session per developer; starting a new task doesn’t auto-close the previous one. Complete or hand off before starting another.
 - **Developer ID** — Set `RELAY_DEVELOPER_ID` to a stable value (e.g. random ID or handle). Handoffs are matched by this id: use the *same* id as recipient when handing off to yourself so pending handoffs appear at check-in.
 - **Offline** — Relay works offline; Jira updates and issue fetch happen when the network and config are available.
+
+## Team
+
+**Solo**: Set `RELAY_DEVELOPER_ID` to a stable value. Hand off to your *own* id at EOD so the handoff appears at your next check-in.
+
+**Small team**: Standardize `RELAY_DEVELOPER_ID` (e.g. Slack handle). Same Jira instance; each developer uses their own Jira PAT. Use handoffs when pausing or passing work; recipients see them at check-in. Relay is local — no central server; handoffs are stored in the sender’s DB and “delivered” when the recipient runs check-in.

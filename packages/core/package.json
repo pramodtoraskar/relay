@@ -14,12 +14,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "axios": "^1.6.7",
-    "better-sqlite3": "^12.6.0",
     "nanoid": "^5.0.4"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.8",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3"
   },

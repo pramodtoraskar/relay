@@ -22,3 +22,6 @@ test-results
 
 # IDE / local tooling
 .cursor
+
+# Local Relay state and DBs
+.relay

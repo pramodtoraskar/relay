@@ -1,7 +1,7 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { WorkflowManager } from "../workflow-manager.js";
 
-export function createHandoffTool(wm: WorkflowManager): Tool {
+export function createHandoffTool(_wm: WorkflowManager): Tool {
   return {
     name: "create_handoff",
     description:
@@ -41,7 +41,7 @@ export async function runCreateHandoff(
   }
 ): Promise<string> {
   const fromId = args.from_developer_id ?? process.env["RELAY_DEVELOPER_ID"] ?? process.env["USER"] ?? "default";
-  const handoffId = wm.createHandoff({
+  const handoffId = await wm.createHandoff({
     fromDeveloperId: fromId,
     toDeveloperId: args.to_developer_id,
     title: args.title,

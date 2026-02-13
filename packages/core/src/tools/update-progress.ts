@@ -1,7 +1,7 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { WorkflowManager } from "../workflow-manager.js";
 
-export function updateProgressTool(wm: WorkflowManager): Tool {
+export function updateProgressTool(_wm: WorkflowManager): Tool {
   return {
     name: "update_progress",
     description:
@@ -35,14 +35,14 @@ export async function runUpdateProgress(
     developer_id?: string;
   }
 ): Promise<string> {
-  wm.updateProgress(
+  await wm.updateProgress(
     args.session_id,
     args.note,
     args.minutes_logged,
     args.commit_sha,
     args.complete_micro_task_id
   );
-  const tasks = wm.getMicroTasks(args.session_id);
+  const tasks = await wm.getMicroTasks(args.session_id);
   const done = tasks.filter((t) => t.status === "done").length;
   return `Progress updated. Micro-tasks: ${done}/${tasks.length} done.`;
 }

@@ -4,79 +4,66 @@ Get from zero to your first task in about 5 minutes.
 
 ## Prerequisites
 
-- **Node.js** 18, 20, or 24 (LTS). `better-sqlite3` v12+ provides prebuilt binaries for these versions.
-- **Git** (optional; for branch suggestions and commit linking)
-- **Jira** (optional; for issue fetch and status updates)
+- **Required**: Node.js 18+, npm (and npx), network on first run (to fetch MCP packages), writable path for the workflow SQLite DB (default: `~/.relay/relay.db` or `.relay/work-tracker.db` in project).
+- **Optional**: **Jira** — set `JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN` (or `RELAY_JIRA_*`) for issues and status updates. **Git** — no config needed; Relay uses your local repo (current directory) for branch and commits. **Handoffs** — set `RELAY_DEVELOPER_ID` (defaults to `$USER`).
 
 ## 1. Install
 
-From the repo:
-
 ```bash
-git clone https://github.com/relay-dev/relay.git
-cd relay
-npm install
-npm run build
-npm run setup
+git clone https://github.com/relay-dev/relay.git && cd relay
+npm install && npm run build && npm run setup
 ```
 
-Or with the install script (Unix):
-
-```bash
-./scripts/setup.sh
-```
-
-This creates `~/.relay/` and an example env file. Your local SQLite DB will be at `~/.relay/relay.db`.
+Or download ZIP, extract, then the same commands from the extracted folder. This creates `~/.relay/` and an example env file.
 
 ## 2. Configure (optional)
 
-For **Jira** (recommended): Set these four variables. `RELAY_JIRA_API_TOKEN` is your **Jira Personal Access Token** (same as in Jira Cloud).
+For **Jira**: set `JIRA_URL` (or `RELAY_JIRA_BASE_URL`), `JIRA_EMAIL`, `JIRA_TOKEN` (or `RELAY_JIRA_API_TOKEN`). For **handoffs**: set `RELAY_DEVELOPER_ID` to a stable id (e.g. `node -e "console.log(require('crypto').randomBytes(8).toString('hex'))"`). Copy from `~/.relay/env.example` and export in your shell or use a `.env` in your project.
 
-- `RELAY_JIRA_BASE_URL` — e.g. `https://your-domain.atlassian.net`
-- `RELAY_JIRA_EMAIL` — your Jira email
-- `RELAY_JIRA_API_TOKEN` — Jira Personal Access Token
-- `RELAY_DEVELOPER_ID` — a random ID or handle (for handoffs). Generate one: `node -e "console.log(require('crypto').randomBytes(8).toString('hex'))"`. Defaults to `$USER` if unset.
-
-Copy from `~/.relay/env.example` and export in your shell or use a `.env` in your project.
-
-## 3. Run your first check-in
+## 3. First run
 
 ```bash
 npx relay checkin
 ```
 
-You’ll see:
+You’ll see pending handoffs, assigned Jira issues (if configured), current branch and recent commits, and active session. Then:
 
-- Pending handoffs (none yet)
-- Assigned Jira issues (if configured)
-- Current Git branch and recent commits
-- Active session (if any)
+- `npx relay start PROJ-42` — start a task (replace with your issue key)
+- `npx relay update "Implemented API"` — log progress
+- `npx relay complete --url <MR_URL>` — complete and optionally link the MR
+- `npx relay eod` — end-of-day summary
 
-## 4. Start a task
+## 4. IDE setup
 
-```bash
-npx relay start PROJ-42
+**Cursor** — Add Relay as an MCP server. Edit `~/.cursor/mcp.json` (macOS) or `%USERPROFILE%\.cursor\mcp.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "relay": {
+      "command": "npx",
+      "args": ["-y", "@relay/core"],
+      "env": {
+        "RELAY_DEVELOPER_ID": "your-id",
+        "RELAY_JIRA_BASE_URL": "https://your-domain.atlassian.net",
+        "RELAY_JIRA_EMAIL": "you@example.com",
+        "RELAY_JIRA_API_TOKEN": "your-jira-pat"
+      }
+    }
+  }
+}
 ```
 
-Replace `PROJ-42` with a real Jira issue key. Relay will:
+Restart Cursor. In chat you can ask: “Run my morning check-in”, “Start task PROJ-42”, etc. To disable Jira: set `RELAY_JIRA_MCP_DISABLED=1` in `env`.
 
-- Fetch the issue summary (if Jira is configured)
-- Create a work session and suggest a branch name
-- Create a default micro-task (or use `--tasks "Task A,Task B"`)
+**VS Code** — Use the Relay extension (Command Palette → “Relay: Morning check-in”, etc.) or run `npx relay checkin` in the integrated terminal. Ensure `relay` or `npx relay` is in PATH.
 
-Then:
+**Claude Desktop** — Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows). Add the same `relay` entry under `mcpServers` as for Cursor, then restart Claude.
 
-- `npx relay update "Implemented API"` — log progress (uses active session)
-- `npx relay complete --url <MR_URL>` — complete the task and optionally link the MR
-
-## 5. Use Relay in your IDE
-
-- **Cursor**: See [Cursor setup](cursor-setup.md) — add the MCP server for tools and resources inside the AI chat.
-- **VS Code**: Install the Relay extension and use the command palette, or run `relay` in the integrated terminal.
-- **CLI only**: Use `relay` commands from any terminal.
+**CLI only** — From repo root: `npx relay checkin`, `npx relay start PROJ-42`, etc. Or `cd packages/cli && npm link` then run `relay` from any directory.
 
 ## Next steps
 
 - [User guide](user-guide.md) — daily workflows (check-in, handoffs, EOD).
-- [Team setup](team-setup.md) — small team and handoff conventions.
-- [Architecture](architecture.md) — how the three layers (Official, Local, Code) fit together.
+- [Architecture](architecture.md) — three layers and MCP-only design.
+- [Troubleshooting](troubleshooting.md) — common issues.

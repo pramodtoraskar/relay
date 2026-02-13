@@ -1,7 +1,7 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { WorkflowManager } from "../workflow-manager.js";
 
-export function morningCheckinTool(wm: WorkflowManager): Tool {
+export function morningCheckinTool(_wm: WorkflowManager): Tool {
   return {
     name: "morning_checkin",
     description:
@@ -52,7 +52,7 @@ export async function runMorningCheckin(
     lines.push(
       `**Active session:** ${result.activeSession.id} (${result.activeSession.jiraKey ?? "no Jira key"}). Consider continuing or creating a handoff.`
     );
-    const status = wm.getTaskStatus(args.developer_id);
+    const status = await wm.getTaskStatus(args.developer_id);
     if (status.microTasks.length > 0) {
       const doneCount = status.microTasks.filter((t) => t.status === "done").length;
       lines.push("", "### Current task progress", `Micro-tasks: ${doneCount}/${status.microTasks.length} done`);

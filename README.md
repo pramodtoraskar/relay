@@ -17,8 +17,16 @@ Relay connects your **project management** (Jira, Linear, GitHub), **local coord
 | **VS Code** | ✅ Extension | Commands + CLI in terminal |
 | **Claude Desktop** | ✅ Native | MCP server |
 | **CLI** | ✅ Standalone | `relay checkin`, `relay start`, `relay handoff`, etc. |
-| **JetBrains** | 🔜 Planned | Plugin |
-| **Web dashboard** | 🔜 Planned | React app |
+---
+
+## Prerequisites
+
+1. **Node.js 18+** — `node -v` should show v18 or higher.
+2. **npm and npx** — Included with Node; used to install and run Relay and to spawn MCP servers.
+3. **Network (first run only)** — Relay fetches Jira/Git/SQLite MCP packages via `npx` on first use.
+4. **Writable DB path** — Relay stores workflow data in SQLite (default: `~/.relay/relay.db` or `.relay/work-tracker.db` in your project). Ensure the path is writable.
+
+**Optional:** **Jira** — to see issues and update status, set `JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN` (or `RELAY_JIRA_*`). **Git** — no connection needed; Relay uses your local repo (current directory) for branch and commits. For handoffs, set `RELAY_DEVELOPER_ID` (defaults to `$USER`). See [Getting started](docs/getting-started.md) for details.
 
 ---
 
@@ -45,7 +53,7 @@ npx relay complete --url https://gitlab.com/.../merge_requests/1
 npx relay eod
 ```
 
-**In Cursor**: Add the Relay MCP server to `.cursor/mcp.json` and ask the AI to “run my morning check-in” or “start task PROJ-42.” See [Cursor setup](docs/cursor-setup.md).
+**In Cursor**: Add the Relay MCP server to `.cursor/mcp.json` and ask the AI to “run my morning check-in” or “start task PROJ-42.” See [Getting started](docs/getting-started.md).
 
 ---
 
@@ -53,14 +61,14 @@ npx relay eod
 
 ```bash
 npm install && npm run build && npm run setup
-export RELAY_JIRA_BASE_URL=https://your.atlassian.net
-export RELAY_JIRA_EMAIL=you@example.com
-export RELAY_JIRA_API_TOKEN=your-jira-personal-access-token   # Jira PAT
-export RELAY_DEVELOPER_ID=your-id   # random ID or handle
+export JIRA_URL=https://your.atlassian.net
+export JIRA_EMAIL=you@example.com
+export JIRA_TOKEN=your-jira-token
+export RELAY_DEVELOPER_ID=your-id   # optional; defaults to $USER
 npx relay checkin
 ```
 
-Configure Jira (optional) and set `RELAY_DEVELOPER_ID` (e.g. random ID or handle) for handoffs. Full guide: [Getting started](docs/getting-started.md).
+See [Getting started](docs/getting-started.md) for full install and IDE setup.
 
 ---
 
@@ -79,33 +87,21 @@ Configure Jira (optional) and set `RELAY_DEVELOPER_ID` (e.g. random ID or handle
 
 ## Why Relay?
 
-- **Research-backed**: Structured handoffs and micro-tasks reduce context-switching cost and improve coordination (see [Scientific backing](docs/scientific-backing.md)).
+- **Research-backed**: Structured handoffs and micro-tasks reduce context-switching cost and improve coordination.
 - **Non-invasive**: Works alongside your existing Git and Jira workflow; no mandatory process change.
 - **IDE-agnostic**: Same workflow in Cursor, VS Code, Claude Desktop, or terminal.
 - **Team-ready**: Handoffs and shared Jira make async and cross-timezone collaboration easier.
 
 ---
 
-## Installation by IDE
-
-| IDE | Guide |
-|-----|-------|
-| **Cursor** | [cursor-setup.md](docs/cursor-setup.md) — MCP config + prompts |
-| **VS Code** | [vscode-setup.md](docs/vscode-setup.md) — Extension or CLI |
-| **Claude Desktop** | [claude-desktop-setup.md](docs/claude-desktop-setup.md) — MCP config |
-| **CLI only** | [cli-setup.md](docs/cli-setup.md) |
-
----
-
 ## Documentation
 
-- [Getting started](docs/getting-started.md) — 5-minute setup
-- [Architecture](docs/architecture.md) — Three layers (Official, Local, Code)
-- [User guide](docs/user-guide.md) — Daily workflows
-- [Team setup](docs/team-setup.md) — Multi-developer configuration
+- [Getting started](docs/getting-started.md) — Prerequisites, install, configure, first run, IDE setup (Cursor, VS Code, Claude, CLI)
+- [User guide](docs/user-guide.md) — Daily workflows and team setup
+- [Architecture](docs/architecture.md) — Three layers and MCP-only design
 - [API reference](docs/api-reference.md) — MCP tools and resources
 - [Troubleshooting](docs/troubleshooting.md)
-- [Testing (step-by-step)](docs/testing.md)
+- [Testing](docs/testing.md)
 
 ---
 

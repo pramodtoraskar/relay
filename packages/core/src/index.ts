@@ -1,11 +1,20 @@
 /**
- * @relay/core — Database, Jira, Git clients and WorkflowManager.
- * For MCP server entry point use: relay-mcp (bin) or run "node dist/run-mcp.js"
+ * @relay/core — Relay MCP server and workflow orchestration.
+ *
+ * Uses MCP only: Jira MCP, Git MCP, SQLite MCP. No direct API or DB.
+ * Exposes: RelayOrchestrator, WorkflowManager, McpClientsManager, McpDbAdapter.
  */
-export { DatabaseManager } from "./database-manager.js";
-export { JiraClient } from "./jira-client.js";
-export type { JiraConfig, JiraIssue } from "./jira-client.js";
-export { GitClient } from "./git-client.js";
+
+export { McpClientsManager } from "./mcp-clients.js";
+export type { McpClientsConfig, ToolResult } from "./mcp-clients.js";
+export { McpDbAdapter } from "./db-adapter.js";
+export type { IRelayDb } from "./db-adapter.js";
 export { WorkflowManager } from "./workflow-manager.js";
-export type { MorningCheckinResult, StartTaskResult, CreateHandoffInput } from "./workflow-manager.js";
+export type {
+  MorningCheckinResult,
+  StartTaskResult,
+  CreateHandoffInput,
+} from "./workflow-manager.js";
+export { RelayOrchestrator } from "./orchestrator.js";
+export type { RelayOrchestratorOptions } from "./orchestrator.js";
 export { runMcpServer } from "./server.js";

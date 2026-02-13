@@ -1,7 +1,7 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { WorkflowManager } from "../workflow-manager.js";
 
-export function startTaskTool(wm: WorkflowManager): Tool {
+export function startTaskTool(_wm: WorkflowManager): Tool {
   return {
     name: "start_task",
     description:

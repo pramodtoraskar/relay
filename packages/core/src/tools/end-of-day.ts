@@ -1,7 +1,7 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { WorkflowManager } from "../workflow-manager.js";
 
-export function endOfDayTool(wm: WorkflowManager): Tool {
+export function endOfDayTool(_wm: WorkflowManager): Tool {
   return {
     name: "end_of_day",
     description:
