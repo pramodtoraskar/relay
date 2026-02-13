@@ -1,0 +1,27 @@
+# Dependencies and local package files
+node_modules
+.pnpm-store
+.yarn
+
+# Local binaries and build output
+dist
+build
+*.tsbuildinfo
+
+# Local env files
+.env
+.env.*
+.env.local
+*.local
+
+# Local testing (source and results)
+tests
+coverage
+.nyc_output
+test-results
+
+# IDE / local tooling
+.cursor
+
+# Local Relay state and DBs
+.relay

@@ -1,0 +1,29 @@
+{
+  "mcp.servers": {
+    "jira": {
+      "command": "npx",
+      "args": ["-y", "@red-hat/jira-mcp"],
+      "env": {
+        "JIRA_URL": "https://your-company.atlassian.net",
+        "JIRA_TOKEN": "${env:JIRA_TOKEN}",
+        "JIRA_EMAIL": "${env:JIRA_EMAIL}"
+      }
+    },
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git", "${workspaceFolder}"]
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "mcp-sqlite", "${workspaceFolder}/.relay/work-tracker.db"]
+    },
+    "relay": {
+      "command": "npx",
+      "args": ["-y", "@relay/core"],
+      "env": {
+        "RELAY_DB_PATH": "${workspaceFolder}/.relay/work-tracker.db",
+        "DATABASE_PATH": "${workspaceFolder}/.relay/work-tracker.db"
+      }
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "name": "relay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered development workflow system for task handoffs, context preservation, and team coordination",
+  "author": "Relay Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/relay-dev/relay.git"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @relay/core && npm run build -w @relay/cli && npm run build -w relay-vscode",
+    "test": "jest --config jest.config.js",
+    "test:unit": "jest --config jest.config.js --testPathPattern=unit",
+    "test:integration": "jest --config jest.config.js --testPathPattern=integration",
+    "test:e2e": "npm run build && sh tests/e2e/relay-human-ai-scenarios.sh",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
+    "setup": "node scripts/setup.js",
+    "migrate": "node scripts/migrate-db.js",
+    "relay": "relay",
+    "dev": "npm run build && RELAY_JIRA_MCP_DISABLED=1 RELAY_GIT_MCP_DISABLED=1 RELAY_DB_PATH=/tmp/relay-dev.db node packages/cli/dist/index.js checkin"
+  },
+  "devDependencies": {
+    "@relay/cli": "workspace:*",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.2.4",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

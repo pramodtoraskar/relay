@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: "Describe the feature you'd like and how it would help your workflow."
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem does this solve?
+      placeholder: I'm always frustrated when...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How should it work?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      required: false
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Layer (if applicable)
+      options:
+        - Official (Jira/Linear/GitHub)
+        - Local (SQLite / Relay)
+        - Code (Git)
+        - N/A
