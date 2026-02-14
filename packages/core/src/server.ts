@@ -12,6 +12,10 @@ import { startTaskTool, runStartTask } from "./tools/start-task.js";
 import { updateProgressTool, runUpdateProgress } from "./tools/update-progress.js";
 import { completeTaskTool, runCompleteTask } from "./tools/complete-task.js";
 import { createHandoffTool, runCreateHandoff } from "./tools/create-handoff.js";
+import {
+  createSubtaskFromMrReviewTool,
+  runCreateSubtaskFromMrReview,
+} from "./tools/create-subtask-from-mr-review.js";
 import { endOfDayTool, runEndOfDay } from "./tools/end-of-day.js";
 import {
   getRoleGuidanceTool,
@@ -23,6 +27,84 @@ import {
   listRolesTool,
   runListRoles,
 } from "./tools/role-tools.js";
+import {
+  smartHandoffTool,
+  runSmartHandoff,
+  reviewReadinessTool,
+  runReviewReadinessCheck,
+  contextResurrectionTool,
+  runContextResurrection,
+  crossTimezoneRelayTool,
+  runCrossTimezoneRelay,
+  knowledgeTransferTool,
+  runKnowledgeTransfer,
+  autoReviewAssignmentTool,
+  runAutoReviewAssignment,
+  reviewBottleneckDetectorTool,
+  runReviewBottleneckDetector,
+  reviewImpactAnalyzerTool,
+  runReviewImpactAnalyzer,
+  workSessionAnalyticsTool,
+  runWorkSessionAnalytics,
+  focusTimeProtectorTool,
+  runFocusTimeProtector,
+  sprintAutoPlanningTool,
+  runSprintAutoPlanning,
+  capacityForecastingTool,
+  runCapacityForecasting,
+  storyBreakdownAssistantTool,
+  runStoryBreakdownAssistant,
+  technicalDebtTrackerTool,
+  runTechnicalDebtTracker,
+  codeQualityGateTool,
+  runCodeQualityGate,
+  flakyTestDetectorTool,
+  runFlakyTestDetector,
+  mergeConflictPredictorTool,
+  runMergeConflictPredictor,
+  pairProgrammingMatcherTool,
+  runPairProgrammingMatcher,
+  blockersResolverTool,
+  runBlockersResolver,
+  preDeployChecklistTool,
+  runPreDeployChecklist,
+  deployImpactAnalyzerTool,
+  runDeployImpactAnalyzer,
+  rollbackRecommenderTool,
+  runRollbackRecommender,
+  developerHappinessTrackerTool,
+  runDeveloperHappinessTracker,
+  storyCycleTimeAnalyzerTool,
+  runStoryCycleTimeAnalyzer,
+  teamVelocityDashboardTool,
+  runTeamVelocityDashboard,
+  newDeveloperGuideTool,
+  runNewDeveloperGuide,
+  codeAreaMapperTool,
+  runCodeAreaMapper,
+  bestPracticesEnforcerTool,
+  runBestPracticesEnforcer,
+  interruptionMinimizerTool,
+  runInterruptionMinimizer,
+  taskSwitcherTool,
+  runTaskSwitcher,
+  workLifeBalanceMonitorTool,
+  runWorkLifeBalanceMonitor,
+  smartTaskRecommenderTool,
+  runSmartTaskRecommender,
+  codePatternLearnerTool,
+  runCodePatternLearner,
+  sprintRiskPredictorTool,
+  runSprintRiskPredictor,
+  automatedRetrospectiveTool,
+  runAutomatedRetrospective,
+  securityReviewTriggerTool,
+  runSecurityReviewTrigger,
+  complianceCheckerTool,
+  runComplianceChecker,
+  dependencyVulnerabilityScannerTool,
+  runDependencyVulnerabilityScanner,
+} from "./tools/index.js";
 
 const orchestrator = new RelayOrchestrator();
 
@@ -69,6 +151,45 @@ const tools = [
   { ...completeTaskTool(orchestrator as any), name: "finish_task" },
   createHandoffTool(orchestrator as any),
   { ...createHandoffTool(orchestrator as any), name: "transfer_to" },
+  createSubtaskFromMrReviewTool(),
+  smartHandoffTool(),
+  reviewReadinessTool(),
+  contextResurrectionTool(),
+  crossTimezoneRelayTool(),
+  knowledgeTransferTool(),
+  autoReviewAssignmentTool(),
+  reviewBottleneckDetectorTool(),
+  reviewImpactAnalyzerTool(),
+  workSessionAnalyticsTool(),
+  focusTimeProtectorTool(),
+  sprintAutoPlanningTool(),
+  capacityForecastingTool(),
+  storyBreakdownAssistantTool(),
+  technicalDebtTrackerTool(),
+  codeQualityGateTool(),
+  flakyTestDetectorTool(),
+  mergeConflictPredictorTool(),
+  pairProgrammingMatcherTool(),
+  blockersResolverTool(),
+  preDeployChecklistTool(),
+  deployImpactAnalyzerTool(),
+  rollbackRecommenderTool(),
+  developerHappinessTrackerTool(),
+  storyCycleTimeAnalyzerTool(),
+  teamVelocityDashboardTool(),
+  newDeveloperGuideTool(),
+  codeAreaMapperTool(),
+  bestPracticesEnforcerTool(),
+  interruptionMinimizerTool(),
+  taskSwitcherTool(),
+  workLifeBalanceMonitorTool(),
+  smartTaskRecommenderTool(),
+  codePatternLearnerTool(),
+  sprintRiskPredictorTool(),
+  automatedRetrospectiveTool(),
+  securityReviewTriggerTool(),
+  complianceCheckerTool(),
+  dependencyVulnerabilityScannerTool(),
   endSessionBase,
   { ...endSessionBase, name: "pause_session" },
   { ...endSessionBase, name: "resume_session" },
@@ -191,7 +312,156 @@ export async function runMcpServer(): Promise<void> {
           break;
         case "handoff_task":
         case "transfer_to":
-          text = await runCreateHandoff(orchestrator as any, { ...a, from_developer_id: devId } as any);
+          text = await runCreateHandoff(orchestrator.getWorkflowManager(), {
+            ...a,
+            from_developer_id: devId,
+            merge_request_url: a.merge_request_url as string | undefined,
+            jira_issue_key: a.jira_issue_key as string | undefined,
+          } as any);
+          break;
+        case "create_subtask_from_mr_review":
+          text = await runCreateSubtaskFromMrReview(orchestrator, {
+            jira_issue_key: a.jira_issue_key as string,
+            merge_request_url: a.merge_request_url as string | undefined,
+            project_id: a.project_id as string | undefined,
+            project_name: a.project_name as string | undefined,
+            mr_iid: a.mr_iid as number | undefined,
+            merge_request_id: a.merge_request_id as string | undefined,
+          });
+          break;
+        case "smart_handoff":
+          text = await runSmartHandoff(orchestrator, {
+            task_id: a.task_id as string,
+            from_dev: a.from_dev as string,
+            to_dev: a.to_dev as string,
+            auto_analyze: a.auto_analyze as boolean | undefined,
+            custom_notes: a.custom_notes as string | undefined,
+            project_id: a.project_id as string | undefined,
+            project_name: a.project_name as string | undefined,
+            merge_request_url: a.merge_request_url as string | undefined,
+            mr_iid: a.mr_iid as number | undefined,
+          });
+          break;
+        case "review_readiness_check":
+          text = await runReviewReadinessCheck(orchestrator, {
+            task_id: a.task_id as string,
+            dev_name: devId,
+          });
+          break;
+        case "context_resurrection":
+          text = await runContextResurrection(orchestrator, {
+            dev_name: devId,
+            days_away: a.days_away as number | undefined,
+          });
+          break;
+        case "cross_timezone_relay":
+          text = await runCrossTimezoneRelay(orchestrator, { dev_name: devId, suggest_only: a.suggest_only as boolean | undefined });
+          break;
+        case "knowledge_transfer":
+          text = await runKnowledgeTransfer(orchestrator, { task_id: a.task_id as string, dev_name: devId });
+          break;
+        case "auto_review_assignment":
+          text = await runAutoReviewAssignment(orchestrator, { task_id: a.task_id as string | undefined, dev_name: devId });
+          break;
+        case "review_bottleneck_detector":
+          text = await runReviewBottleneckDetector(orchestrator);
+          break;
+        case "review_impact_analyzer":
+          text = await runReviewImpactAnalyzer(orchestrator, {
+            task_id: a.task_id as string,
+            project_id: a.project_id as string | undefined,
+            mr_iid: a.mr_iid as number | undefined,
+          });
+          break;
+        case "work_session_analytics":
+          text = await runWorkSessionAnalytics(orchestrator, { dev_name: devId });
+          break;
+        case "focus_time_protector":
+          text = await runFocusTimeProtector(orchestrator, { dev_name: devId });
+          break;
+        case "sprint_auto_planning":
+          text = await runSprintAutoPlanning(orchestrator, { sprint_id: a.sprint_id as string | undefined, project_key: a.project_key as string | undefined });
+          break;
+        case "capacity_forecasting":
+          text = await runCapacityForecasting(orchestrator, { dev_name: devId });
+          break;
+        case "story_breakdown_assistant":
+          text = await runStoryBreakdownAssistant(orchestrator, { task_id: a.task_id as string });
+          break;
+        case "technical_debt_tracker":
+          text = await runTechnicalDebtTracker(orchestrator);
+          break;
+        case "code_quality_gate":
+          text = await runCodeQualityGate(orchestrator, { task_id: a.task_id as string, dev_name: devId });
+          break;
+        case "flaky_test_detective":
+          text = await runFlakyTestDetector(orchestrator);
+          break;
+        case "merge_conflict_predictor":
+          text = await runMergeConflictPredictor(orchestrator, { task_id: a.task_id as string, dev_name: devId });
+          break;
+        case "pair_programming_matcher":
+          text = await runPairProgrammingMatcher(orchestrator, { task_id: a.task_id as string });
+          break;
+        case "blockers_resolver":
+          text = await runBlockersResolver(orchestrator, { task_id: a.task_id as string, blocker_reason: a.blocker_reason as string | undefined });
+          break;
+        case "pre_deploy_checklist":
+          text = await runPreDeployChecklist(orchestrator, { project_key: a.project_key as string | undefined });
+          break;
+        case "deploy_impact_analyzer":
+          text = await runDeployImpactAnalyzer(orchestrator, { version: a.version as string | undefined, project_key: a.project_key as string | undefined });
+          break;
+        case "rollback_recommender":
+          text = await runRollbackRecommender(orchestrator);
+          break;
+        case "developer_happiness_tracker":
+          text = await runDeveloperHappinessTracker(orchestrator, { dev_name: devId });
+          break;
+        case "story_cycle_time_analyzer":
+          text = await runStoryCycleTimeAnalyzer(orchestrator, { project_key: a.project_key as string | undefined });
+          break;
+        case "team_velocity_dashboard":
+          text = await runTeamVelocityDashboard(orchestrator, { project_key: a.project_key as string | undefined });
+          break;
+        case "new_developer_guide":
+          text = await runNewDeveloperGuide(orchestrator);
+          break;
+        case "code_area_mapper":
+          text = await runCodeAreaMapper(orchestrator, { task_id: a.task_id as string, area: a.area as string | undefined });
+          break;
+        case "best_practices_enforcer":
+          text = await runBestPracticesEnforcer(orchestrator, { task_id: a.task_id as string });
+          break;
+        case "interruption_minimizer":
+          text = await runInterruptionMinimizer(orchestrator, { dev_name: devId });
+          break;
+        case "task_switcher":
+          text = await runTaskSwitcher(orchestrator, { new_task_id: a.new_task_id as string, dev_name: devId });
+          break;
+        case "work_life_balance_monitor":
+          text = await runWorkLifeBalanceMonitor(orchestrator, { dev_name: devId });
+          break;
+        case "smart_task_recommender":
+          text = await runSmartTaskRecommender(orchestrator, { dev_name: devId });
+          break;
+        case "code_pattern_learner":
+          text = await runCodePatternLearner(orchestrator, { task_id: a.task_id as string | undefined });
+          break;
+        case "sprint_risk_predictor":
+          text = await runSprintRiskPredictor(orchestrator, { project_key: a.project_key as string | undefined });
+          break;
+        case "automated_retrospective":
+          text = await runAutomatedRetrospective(orchestrator, { sprint_id: a.sprint_id as string | undefined, project_key: a.project_key as string | undefined });
+          break;
+        case "security_review_trigger":
+          text = await runSecurityReviewTrigger(orchestrator, { task_id: a.task_id as string });
+          break;
+        case "compliance_checker":
+          text = await runComplianceChecker(orchestrator, { task_id: a.task_id as string });
+          break;
+        case "dependency_vulnerability_scanner":
+          text = await runDependencyVulnerabilityScanner(orchestrator);
           break;
         case "end_session":
         case "pause_session":

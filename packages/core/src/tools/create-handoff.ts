@@ -5,7 +5,7 @@ export function createHandoffTool(_wm: WorkflowManager): Tool {
   return {
     name: "handoff_task",
     description:
-      "Handoff task / Transfer to. Create a handoff to another developer: capture context, what's done, what's next, branch and file list. Marks current work session as handed off.",
+      "Handoff task / Transfer to. Create a handoff to another developer: capture context, what's done, what's next, branch and file list. Marks current work session as handed off. Before handover: if merge_request_url (and jira_issue_key or active session) is provided, adds a Jira comment with the MR link so reviewers see it.",
     inputSchema: {
       type: "object",
       properties: {
@@ -19,6 +19,8 @@ export function createHandoffTool(_wm: WorkflowManager): Tool {
         blockers_notes: { type: "string", description: "Blockers or notes" },
         work_session_id: { type: "string", description: "Optional session to hand off" },
         from_developer_id: { type: "string" },
+        merge_request_url: { type: "string", description: "If set, add this MR link as a comment on the Jira issue (use with active session or jira_issue_key)" },
+        jira_issue_key: { type: "string", description: "Jira issue to add MR comment to (default: from active session)" },
       },
       required: ["to_developer_id", "title"],
     },
@@ -38,9 +40,16 @@ export async function runCreateHandoff(
     blockers_notes?: string;
     work_session_id?: string;
     from_developer_id?: string;
+    merge_request_url?: string;
+    jira_issue_key?: string;
   }
 ): Promise<string> {
   const fromId = args.from_developer_id ?? process.env["RELAY_DEVELOPER_ID"] ?? process.env["USER"] ?? "default";
+  let jiraIssueKey = args.jira_issue_key;
+  if (args.merge_request_url && !jiraIssueKey) {
+    const session = await wm.getActiveSession(fromId);
+    if (session?.jiraKey) jiraIssueKey = session.jiraKey;
+  }
   const handoffId = await wm.createHandoff({
     fromDeveloperId: fromId,
     toDeveloperId: args.to_developer_id,
@@ -52,6 +61,12 @@ export async function runCreateHandoff(
     fileList: args.file_list,
     blockersNotes: args.blockers_notes,
     workSessionId: args.work_session_id,
+    mergeRequestUrl: args.merge_request_url,
+    jiraIssueKey: jiraIssueKey ?? undefined,
   });
-  return `Handoff created: **${handoffId}** — "${args.title}" to ${args.to_developer_id}.`;
+  const mrNote =
+    args.merge_request_url && jiraIssueKey
+      ? " Jira comment added with MR link."
+      : "";
+  return `Handoff created: **${handoffId}** — "${args.title}" to ${args.to_developer_id}.${mrNote}`;
 }

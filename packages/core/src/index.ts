@@ -20,3 +20,6 @@ export type { RelayOrchestratorOptions } from "./orchestrator.js";
 export { runMcpServer } from "./server.js";
 export { getRoleGuidance, listRoles, ROLE_GUIDANCE, RELAY_ROLE_IDS } from "./roles.js";
 export type { RelayRoleId, RoleGuidance } from "./roles.js";
+export { BaseOrchestrationTool } from "./lib/base-orchestration-tool.js";
+export * as JiraState from "./lib/jira-state.js";
+export type { JiraIssueState, ResolvedTaskContext, StateValidationResult, JiraTransitionIntent } from "./types/orchestration-tools.js";
