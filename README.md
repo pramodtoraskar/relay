@@ -5,6 +5,8 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node 18+](https://img.shields.io/badge/node-18%2B-green.svg)](https://nodejs.org)
 
+<img src="images/relay-workflow.png" alt="Relay workflow" width="720" style="max-width: 100%;" />
+
 Relay connects your **project management** (Jira, Linear, GitHub), **local coordination** (SQLite: sessions, micro-tasks, handoffs), and **code** (Git) so you and your team stay in sync without changing how you work.
 
 ---
