@@ -1,11 +1,14 @@
 /**
  * MCP Clients Manager — Spawns and coordinates Jira, Git, and SQLite MCP servers.
  * Relay uses these instead of direct API or DB access.
+ * Jira and Git can be either: (1) spawned via command/args (stdio), or (2) connected to an already-running MCP server via URL (Streamable HTTP).
  */
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { join } from "path";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import fs from "fs";
+import { dirname, join } from "path";
 
 export interface McpClientsConfig {
   /** Path to workspace/repo for Git MCP (default: cwd) */
@@ -20,8 +23,16 @@ export interface McpClientsConfig {
   jiraCommand?: string;
   /** Override Jira MCP args (e.g. ["/path/to/jira-mcp/run.js"]). Used when jiraCommand is set. */
   jiraArgs?: string[];
+  /** Connect to an already-running Jira MCP server at this URL (Streamable HTTP). When set, no subprocess is spawned. */
+  jiraMcpUrl?: string;
   /** If true, do not start Git MCP; callGitTool returns empty branch/commits. Use when Git MCP is unavailable or for minimal dev run. */
   gitDisabled?: boolean;
+  /** Connect to an already-running Git/GitLab MCP server at this URL (Streamable HTTP). When set, no subprocess is spawned. */
+  gitMcpUrl?: string;
+  /** Override Git MCP command (e.g. "podman"). When set, args from gitArgs or RELAY_GIT_MCP_ARGS. Use for locally running stdio MCP (e.g. RH-GITLAB-MCP in a container). */
+  gitCommand?: string;
+  /** Override Git MCP args (e.g. ["run", "-i", "--rm", "localhost/rh-gitlab-mcp:latest"]). Used when gitCommand is set. */
+  gitArgs?: string[];
 }
 
 export interface ToolResult {
@@ -33,15 +44,21 @@ export interface ToolResult {
  * Manages MCP client connections to Jira, Git, and SQLite servers.
  * Spawns each as a subprocess and forwards tool calls.
  */
+type ClientTransport = StdioClientTransport | InstanceType<typeof StreamableHTTPClientTransport>;
+
 export class McpClientsManager {
   private config: McpClientsConfig;
   private jiraClient: Client | null = null;
-  private jiraTransport: StdioClientTransport | null = null;
+  private jiraTransport: ClientTransport | null = null;
+  private lastJiraConnectionError: string | null = null;
   private gitClient: Client | null = null;
-  private gitTransport: StdioClientTransport | null = null;
+  private gitTransport: ClientTransport | null = null;
+  private lastGitConnectionError: string | null = null;
   private dbClient: Client | null = null;
   private dbTransport: StdioClientTransport | null = null;
   private started = false;
+  private jiraToolsCache: Array<{ name: string; description?: string }> | null = null;
+  private gitToolsCache: Array<{ name: string; description?: string }> | null = null;
 
   constructor(config: McpClientsConfig = {}) {
     const cwd = process.cwd();
@@ -65,35 +82,65 @@ export class McpClientsManager {
       (process.env["RELAY_JIRA_MCP_DISABLED"] === "1" || process.env["RELAY_DISABLE_JIRA_MCP"] === "1");
 
     if (!jiraDisabled) {
-      const jiraEnv = {
-        ...process.env,
-        JIRA_URL: this.config.jiraEnv?.JIRA_URL ?? process.env["JIRA_URL"] ?? process.env["RELAY_JIRA_BASE_URL"] ?? "",
-        JIRA_TOKEN: this.config.jiraEnv?.JIRA_TOKEN ?? process.env["JIRA_TOKEN"] ?? process.env["RELAY_JIRA_API_TOKEN"] ?? "",
-        JIRA_EMAIL: this.config.jiraEnv?.JIRA_EMAIL ?? process.env["JIRA_EMAIL"] ?? process.env["RELAY_JIRA_EMAIL"] ?? "",
-      };
-      const jiraCommand =
-        this.config.jiraCommand ?? process.env["RELAY_JIRA_MCP_COMMAND"];
-      const jiraArgsRaw =
-        this.config.jiraArgs?.length
-          ? this.config.jiraArgs
-          : process.env["RELAY_JIRA_MCP_ARGS"]
-            ? process.env["RELAY_JIRA_MCP_ARGS"].split(",").map((s) => s.trim()).filter(Boolean)
-            : null;
-      const command = jiraCommand ?? "npx";
-      const args = jiraArgsRaw ?? (jiraCommand ? [] : ["-y", "@red-hat/jira-mcp"]);
+      const jiraMcpUrl =
+        this.config.jiraMcpUrl ??
+        process.env["RELAY_JIRA_MCP_URL"] ??
+        process.env["JIRA_MCP_URL"];
 
-      this.jiraTransport = new StdioClientTransport({
-        command,
-        args,
-        env: jiraEnv as Record<string, string>,
-      });
-      this.jiraClient = new Client({ name: "relay-jira-client", version: "1.0.0" });
-      try {
-        await this.jiraClient.connect(this.jiraTransport as any);
-      } catch (err) {
-        this.jiraClient = null;
-        this.jiraTransport = null;
-        throw err;
+      if (jiraMcpUrl) {
+        // Connect to already-running Jira MCP server (no npm fetch, no subprocess)
+        try {
+          this.jiraTransport = new StreamableHTTPClientTransport(new URL(jiraMcpUrl), {
+            requestInit: {
+              headers: { Accept: "application/json, text/event-stream" },
+            },
+          });
+          this.jiraClient = new Client({ name: "relay-jira-client", version: "1.0.0" });
+          await this.jiraClient.connect(this.jiraTransport as any);
+        } catch (err) {
+          this.lastJiraConnectionError = err instanceof Error ? err.message : String(err);
+          this.jiraClient = null;
+          this.jiraTransport = null;
+        }
+      } else {
+        const jiraToken =
+          this.config.jiraEnv?.JIRA_TOKEN ??
+          process.env["JIRA_TOKEN"] ??
+          process.env["RELAY_JIRA_API_TOKEN"] ??
+          this.config.jiraEnv?.JIRA_API_TOKEN ??
+          process.env["JIRA_API_TOKEN"] ??
+          "";
+        const jiraEnv = {
+          ...process.env,
+          JIRA_URL: this.config.jiraEnv?.JIRA_URL ?? process.env["JIRA_URL"] ?? process.env["RELAY_JIRA_BASE_URL"] ?? "",
+          JIRA_TOKEN: jiraToken,
+          JIRA_API_TOKEN: jiraToken,
+          JIRA_EMAIL: this.config.jiraEnv?.JIRA_EMAIL ?? process.env["JIRA_EMAIL"] ?? process.env["RELAY_JIRA_EMAIL"] ?? "",
+        };
+        const jiraCommand =
+          this.config.jiraCommand ?? process.env["RELAY_JIRA_MCP_COMMAND"];
+        const jiraArgsRaw =
+          this.config.jiraArgs?.length
+            ? this.config.jiraArgs
+            : process.env["RELAY_JIRA_MCP_ARGS"]
+              ? process.env["RELAY_JIRA_MCP_ARGS"].split(",").map((s) => s.trim()).filter(Boolean)
+              : null;
+        const command = jiraCommand ?? "npx";
+        const args = jiraArgsRaw ?? (jiraCommand ? [] : ["-y", "@red-hat/jira-mcp"]);
+
+        this.jiraTransport = new StdioClientTransport({
+          command,
+          args,
+          env: jiraEnv as Record<string, string>,
+        });
+        this.jiraClient = new Client({ name: "relay-jira-client", version: "1.0.0" });
+        try {
+          await this.jiraClient.connect(this.jiraTransport as any);
+        } catch (err) {
+          this.lastJiraConnectionError = err instanceof Error ? err.message : String(err);
+          this.jiraClient = null;
+          this.jiraTransport = null;
+        }
       }
     }
 
@@ -101,25 +148,71 @@ export class McpClientsManager {
       this.config.gitDisabled ?? process.env["RELAY_GIT_MCP_DISABLED"] === "1";
 
     if (!gitDisabled) {
-      this.gitTransport = new StdioClientTransport({
-        command: "npx",
-        args: ["-y", "@modelcontextprotocol/server-git", this.config.workspacePath!],
-      });
-      this.gitClient = new Client({ name: "relay-git-client", version: "1.0.0" });
-      try {
-        await this.gitClient.connect(this.gitTransport as any);
-      } catch (err) {
-        this.gitClient = null;
-        this.gitTransport = null;
+      const gitMcpUrl =
+        this.config.gitMcpUrl ??
+        process.env["RELAY_GIT_MCP_URL"] ??
+        process.env["RELAY_GITLAB_MCP_URL"] ??
+        process.env["GIT_MCP_URL"];
+
+      if (gitMcpUrl) {
+        // Connect to already-running Git/GitLab MCP server via URL (Streamable HTTP)
+        try {
+          this.gitTransport = new StreamableHTTPClientTransport(new URL(gitMcpUrl), {
+            requestInit: {
+              headers: { Accept: "application/json, text/event-stream" },
+            },
+          });
+          this.gitClient = new Client({ name: "relay-git-client", version: "1.0.0" });
+          await this.gitClient.connect(this.gitTransport as any);
+        } catch (err) {
+          this.lastGitConnectionError = err instanceof Error ? err.message : String(err);
+          this.gitClient = null;
+          this.gitTransport = null;
+        }
+      } else {
+        const gitCommand =
+          this.config.gitCommand ?? process.env["RELAY_GIT_MCP_COMMAND"];
+        const gitArgsRaw =
+          this.config.gitArgs?.length
+            ? this.config.gitArgs
+            : process.env["RELAY_GIT_MCP_ARGS"]
+              ? process.env["RELAY_GIT_MCP_ARGS"].split(",").map((s) => s.trim()).filter(Boolean)
+              : null;
+        const command = gitCommand ?? "npx";
+        const args = gitArgsRaw ?? (gitCommand ? [] : ["-y", "@modelcontextprotocol/server-git", this.config.workspacePath!]);
+
+        this.gitTransport = new StdioClientTransport({
+          command,
+          args,
+          env: process.env as Record<string, string>,
+        });
+        this.gitClient = new Client({ name: "relay-git-client", version: "1.0.0" });
+        try {
+          await this.gitClient.connect(this.gitTransport as any);
+        } catch (err) {
+          this.lastGitConnectionError = err instanceof Error ? err.message : String(err);
+          this.gitClient = null;
+          this.gitTransport = null;
+        }
       }
     }
 
+    const dbPath = this.config.databasePath!;
+    const dbDir = dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
     this.dbTransport = new StdioClientTransport({
       command: "npx",
-      args: ["-y", "mcp-sqlite", this.config.databasePath!],
+      args: ["-y", "mcp-sqlite", dbPath],
     });
     this.dbClient = new Client({ name: "relay-db-client", version: "1.0.0" });
-    await this.dbClient.connect(this.dbTransport as any);
+    try {
+      await this.dbClient.connect(this.dbTransport as any);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`SQLite MCP failed to start (${dbPath}): ${message}`);
+    }
 
     this.started = true;
   }
@@ -133,13 +226,14 @@ export class McpClientsManager {
     return { content: text, isError: result?.isError };
   }
 
-  /** Call a Jira MCP tool (e.g. get_jira, search_issues). When Jira MCP is disabled, returns empty/error so workflow still runs. */
+  /** Call a Jira MCP tool (e.g. get_jira, search_issues). When Jira MCP is disabled or connection failed, returns error so workflow can surface it. */
   async callJiraTool(name: string, args: Record<string, unknown> = {}): Promise<ToolResult> {
     await this.start();
     if (!this.jiraClient) {
-      if (name === "search_issues") return { content: "[]", isError: false };
-      if (name === "get_jira") return { content: "", isError: true };
-      return { content: "", isError: true };
+      const msg = this.lastJiraConnectionError || "Jira MCP not connected";
+      if (name === "search_issues") return { content: msg, isError: true };
+      if (name === "get_jira") return { content: msg, isError: true };
+      return { content: msg, isError: true };
     }
     try {
       const result = await this.jiraClient.callTool({ name, arguments: args });
@@ -150,13 +244,14 @@ export class McpClientsManager {
     }
   }
 
-  /** Call a Git MCP tool (e.g. git_log, git_status). When Git MCP is disabled, returns empty so workflow still runs. */
+  /** Call a Git MCP tool (e.g. git_log, git_status). When Git MCP is disabled or connection failed, returns error so workflow can surface it. */
   async callGitTool(name: string, args: Record<string, unknown> = {}): Promise<ToolResult> {
     await this.start();
     if (!this.gitClient) {
-      if (name === "git_status") return { content: "Not a git repo (Git MCP disabled)", isError: false };
-      if (name === "git_log") return { content: "", isError: false };
-      return { content: "", isError: false };
+      const msg = this.lastGitConnectionError || "Git MCP not connected";
+      if (name === "git_status") return { content: msg, isError: true };
+      if (name === "git_log") return { content: msg, isError: true };
+      return { content: msg, isError: true };
     }
     try {
       const result = await this.gitClient.callTool({ name, arguments: args });
@@ -184,14 +279,103 @@ export class McpClientsManager {
     return this.config.databasePath!;
   }
 
+  /** List tools exposed by the Jira MCP. Returns [] if not connected. Cached after first call. */
+  async listJiraTools(): Promise<Array<{ name: string; description?: string }>> {
+    await this.start();
+    if (this.jiraToolsCache) return this.jiraToolsCache;
+    if (!this.jiraClient) return [];
+    try {
+      const res = await this.jiraClient.listTools();
+      const list = (res as { tools?: Array<{ name?: string; description?: string }> }).tools ?? [];
+      this.jiraToolsCache = list.map((t) => ({ name: t.name ?? "", description: t.description }));
+      return this.jiraToolsCache;
+    } catch {
+      return [];
+    }
+  }
+
+  /** List tools exposed by the Git/GitLab MCP. Returns [] if not connected. Cached after first call. */
+  async listGitTools(): Promise<Array<{ name: string; description?: string }>> {
+    await this.start();
+    if (this.gitToolsCache) return this.gitToolsCache;
+    if (!this.gitClient) return [];
+    try {
+      const res = await this.gitClient.listTools();
+      const list = (res as { tools?: Array<{ name?: string; description?: string }> }).tools ?? [];
+      this.gitToolsCache = list.map((t) => ({ name: t.name ?? "", description: t.description }));
+      return this.gitToolsCache;
+    } catch {
+      return [];
+    }
+  }
+
+  /** Resolve Jira MCP tool name for workflow: search issues (JQL). */
+  async getJiraSearchTool(): Promise<string> {
+    const tools = await this.listJiraTools();
+    const match = tools.find(
+      (t) =>
+        /search|jql|issues?|assignee/i.test(t.name) ||
+        (t.description && /search|jql|query.*issue/i.test(t.description))
+    );
+    return match?.name ?? "search_issues";
+  }
+
+  /** Resolve Jira MCP tool name for workflow: get single issue. */
+  async getJiraGetIssueTool(): Promise<string> {
+    const tools = await this.listJiraTools();
+    const match = tools.find(
+      (t) =>
+        /^get_?(issue|jira)/i.test(t.name) || (t.name === "get_issue") ||
+        (t.description && /get.*issue|fetch.*issue/i.test(t.description))
+    );
+    return match?.name ?? "get_jira";
+  }
+
+  /** Resolve Jira MCP tool name for workflow: transition issue. */
+  async getJiraTransitionTool(): Promise<string> {
+    const tools = await this.listJiraTools();
+    const match = tools.find(
+      (t) =>
+        /transition|move|status/i.test(t.name) ||
+        (t.description && /transition|change.*status/i.test(t.description))
+    );
+    return match?.name ?? "transition_issue";
+  }
+
+  /** Resolve Git/GitLab MCP tool name for workflow: repo status / branch. */
+  async getGitStatusTool(): Promise<string> {
+    const tools = await this.listGitTools();
+    const match = tools.find(
+      (t) =>
+        /status|branch|state/i.test(t.name) ||
+        (t.description && /status|branch|working.*tree/i.test(t.description))
+    );
+    return match?.name ?? "git_status";
+  }
+
+  /** Resolve Git/GitLab MCP tool name for workflow: recent commits / log. */
+  async getGitLogTool(): Promise<string> {
+    const tools = await this.listGitTools();
+    const match = tools.find(
+      (t) =>
+        /log|commit|history/i.test(t.name) ||
+        (t.description && /log|commit|history|recent/i.test(t.description))
+    );
+    return match?.name ?? "git_log";
+  }
+
   async close(): Promise<void> {
     if (this.jiraTransport) await (this.jiraTransport as any).close?.();
     if (this.gitTransport) await (this.gitTransport as any).close?.();
     if (this.dbTransport) await (this.dbTransport as any).close?.();
     this.jiraClient = null;
     this.jiraTransport = null;
+    this.lastJiraConnectionError = null;
+    this.jiraToolsCache = null;
     this.gitClient = null;
     this.gitTransport = null;
+    this.lastGitConnectionError = null;
+    this.gitToolsCache = null;
     this.dbClient = null;
     this.dbTransport = null;
     this.started = false;

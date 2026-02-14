@@ -3,9 +3,9 @@ import type { WorkflowManager } from "../workflow-manager.js";
 
 export function endOfDayTool(_wm: WorkflowManager): Tool {
   return {
-    name: "end_of_day",
+    name: "end_session",
     description:
-      "End-of-day summary: show completed work, pending handoffs, and suggest creating handoffs for any active session.",
+      "End session / Pause session / Resume session / Session summary. Show completed work, pending handoffs, and suggest creating handoffs for any active session.",
     inputSchema: {
       type: "object",
       properties: {

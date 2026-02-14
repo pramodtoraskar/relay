@@ -13,6 +13,10 @@ export interface MorningCheckinResult {
   currentBranch: string;
   recentCommits: Array<{ sha: string; message: string }>;
   activeSession: { id: string; jiraKey: string | null } | null;
+  /** Set when Jira MCP call failed (e.g. 406, connection refused, tool not found). */
+  jiraError?: string;
+  /** Set when Git MCP call failed. */
+  gitError?: string;
 }
 
 export interface StartTaskResult {
@@ -41,13 +45,18 @@ function defaultDeveloperId(): string {
 }
 
 function parseJiraIssues(content: string): Array<{ key: string; summary: string }> {
+  if (!content || !content.trim()) return [];
   try {
     const data = JSON.parse(content);
     if (Array.isArray(data)) return data.map((i: any) => ({ key: i.key ?? i.id ?? "", summary: i.summary ?? i.fields?.summary ?? "" }));
     if (data?.issues) return data.issues.map((i: any) => ({ key: i.key ?? i.id ?? "", summary: i.fields?.summary ?? i.summary ?? "" }));
+    if (data?.results && Array.isArray(data.results)) return data.results.map((i: any) => ({ key: i.key ?? i.id ?? "", summary: i.fields?.summary ?? i.summary ?? "" }));
     if (data?.key) return [{ key: data.key, summary: data.fields?.summary ?? data.summary ?? "" }];
     return [];
   } catch {
+    // Some MCPs return plain text or markdown; extract issue keys (e.g. DDISMDPS-2305)
+    const keys = content.match(/\b([A-Z][A-Z0-9]+-\d+)\b/g);
+    if (keys) return [...new Set(keys)].map((key) => ({ key, summary: "" }));
     return [];
   }
 }
@@ -72,6 +81,7 @@ function parseGitLog(content: string): Array<{ sha: string; message: string }> {
 }
 
 function parseGitBranch(content: string): string {
+  if (!content || /Git MCP disabled|Not a git repo/i.test(content)) return "";
   const match = content.match(/On branch (\S+)/i) || content.match(/^\*?\s*(\S+)/);
   return match ? match[1].trim() : "";
 }
@@ -97,17 +107,24 @@ export class WorkflowManager {
       summary: h.context_summary,
     }));
 
-    const jiraRes = await this.mcp.callJiraTool("search_issues", {
-      jql: "assignee = currentUser() AND status != Done ORDER BY updated DESC",
-      max_results: 20,
-    });
+    const jql = "assignee = currentUser() AND status != Done ORDER BY updated DESC";
+    const searchTool = await this.mcp.getJiraSearchTool();
+    const searchArgs = { jql, query: jql, max_results: 20, maxResults: 20, limit: 20 };
+    let jiraRes = await this.mcp.callJiraTool(searchTool, searchArgs);
     const assignedIssues = jiraRes.isError ? [] : parseJiraIssues(jiraRes.content);
+    const jiraError = jiraRes.isError ? (jiraRes.content || "Unknown error").slice(0, 200) : undefined;
 
-    const gitStatusRes = await this.mcp.callGitTool("git_status", { repo_path: process.cwd() });
+    const repoPath = process.cwd();
+    const statusTool = await this.mcp.getGitStatusTool();
+    const gitStatusRes = await this.mcp.callGitTool(statusTool, { repo_path: repoPath, path: repoPath, cwd: repoPath });
     const currentBranch = gitStatusRes.isError ? "" : parseGitBranch(gitStatusRes.content);
 
-    const gitLogRes = await this.mcp.callGitTool("git_log", { repo_path: process.cwd(), max_count: 5 });
+    const logTool = await this.mcp.getGitLogTool();
+    const gitLogRes = await this.mcp.callGitTool(logTool, { repo_path: repoPath, path: repoPath, max_count: 5, limit: 5 });
     const recentCommits = gitLogRes.isError ? [] : parseGitLog(gitLogRes.content);
+    const gitError = (gitStatusRes.isError || gitLogRes.isError)
+      ? (gitStatusRes.isError ? gitStatusRes.content : gitLogRes.content || "Unknown error").slice(0, 200)
+      : undefined;
 
     const rawSession = await this.db.getActiveSession(devId);
     const activeSession = rawSession ? { id: rawSession.id, jiraKey: rawSession.jira_issue_key } : null;
@@ -118,6 +135,8 @@ export class WorkflowManager {
       currentBranch,
       recentCommits,
       activeSession,
+      jiraError,
+      gitError,
     };
   }
 
@@ -126,15 +145,20 @@ export class WorkflowManager {
     await this.db.ensureDeveloper(devId, devId);
 
     let summary = issueKey;
-    const jiraRes = await this.mcp.callJiraTool("get_jira", { issue_key: issueKey });
+    const getIssueTool = await this.mcp.getJiraGetIssueTool();
+    const getIssueArgs = { issue_key: issueKey, issueKey, key: issueKey };
+    const jiraRes = await this.mcp.callJiraTool(getIssueTool, getIssueArgs);
     if (!jiraRes.isError && jiraRes.content) {
       const s = parseJiraIssueSummary(jiraRes.content);
       if (s) summary = s;
-      await this.mcp.callJiraTool("transition_issue", { issue_key: issueKey, transition_name: "In Progress" }).catch(() => {});
+      const transitionTool = await this.mcp.getJiraTransitionTool();
+      await this.mcp.callJiraTool(transitionTool, { issue_key: issueKey, issueKey, key: issueKey, transition_name: "In Progress", transitionName: "In Progress" }).catch(() => {});
     }
 
     const sessionId = nanoid();
-    const gitStatusRes = await this.mcp.callGitTool("git_status", { repo_path: process.cwd() });
+    const repoPath = process.cwd();
+    const statusTool = await this.mcp.getGitStatusTool();
+    const gitStatusRes = await this.mcp.callGitTool(statusTool, { repo_path: repoPath, path: repoPath, cwd: repoPath });
     const currentBranch = parseGitBranch(gitStatusRes.content || "");
     const safe = summary.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9-_]/g, "").slice(0, 30);
     const suggestedBranch = currentBranch ? `feature/${issueKey}-${safe}`.toLowerCase() : `feature/${issueKey}`;
@@ -173,7 +197,14 @@ export class WorkflowManager {
     await this.db.endWorkSession(sessionId, "completed", { mergeRequestUrl, totalMinutes });
     const session = await this.db.getSession(sessionId);
     if (session?.jira_issue_key) {
-      await this.mcp.callJiraTool("transition_issue", { issue_key: session.jira_issue_key, transition_name: "Done" }).catch(() => {});
+      const transitionTool = await this.mcp.getJiraTransitionTool();
+      await this.mcp.callJiraTool(transitionTool, {
+        issue_key: session.jira_issue_key,
+        issueKey: session.jira_issue_key,
+        key: session.jira_issue_key,
+        transition_name: "Done",
+        transitionName: "Done",
+      }).catch(() => {});
     }
   }
 

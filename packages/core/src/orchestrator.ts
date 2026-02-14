@@ -20,13 +20,14 @@ export type RelayOrchestratorOptions = {
  * Orchestrator that uses WorkflowManager backed by MCP clients only.
  */
 export class RelayOrchestrator {
+  private mcp: McpClientsManager;
   private wm: WorkflowManager;
   private db: McpDbAdapter;
 
   constructor(options: RelayOrchestratorOptions = {}) {
-    const mcp = options.mcp ?? new McpClientsManager();
-    this.db = new McpDbAdapter(mcp);
-    this.wm = new WorkflowManager(this.db, mcp);
+    this.mcp = options.mcp ?? new McpClientsManager();
+    this.db = new McpDbAdapter(this.mcp);
+    this.wm = new WorkflowManager(this.db, this.mcp);
   }
 
   async morningCheckin(devName?: string): Promise<MorningCheckinResult> {
@@ -74,5 +75,32 @@ export class RelayOrchestrator {
   /** Expose db adapter for server resources (active-tasks, pending-handoffs, metrics). */
   getDb(): McpDbAdapter {
     return this.db;
+  }
+
+  /** Expose workflow manager for role-aware tools (role_aware_checkin, suggest_next). */
+  getWorkflowManager(): WorkflowManager {
+    return this.wm;
+  }
+
+  /** Call any Jira MCP tool by name with given arguments. Use list_jira_mcp_tools to discover tools. */
+  async callJiraMcpTool(toolName: string, args: Record<string, unknown> = {}): Promise<{ content: string; isError: boolean }> {
+    const r = await this.mcp.callJiraTool(toolName, args);
+    return { content: r.content, isError: !!r.isError };
+  }
+
+  /** Call any Git/GitLab MCP tool by name with given arguments. Use list_gitlab_mcp_tools to discover tools. */
+  async callGitlabMcpTool(toolName: string, args: Record<string, unknown> = {}): Promise<{ content: string; isError: boolean }> {
+    const r = await this.mcp.callGitTool(toolName, args);
+    return { content: r.content, isError: !!r.isError };
+  }
+
+  /** List tools exposed by the Jira MCP (e.g. search_issues, get_issue, transition_issue). */
+  async listJiraMcpTools(): Promise<Array<{ name: string; description?: string }>> {
+    return this.mcp.listJiraTools();
+  }
+
+  /** List tools exposed by the GitLab MCP. */
+  async listGitlabMcpTools(): Promise<Array<{ name: string; description?: string }>> {
+    return this.mcp.listGitTools();
   }
 }

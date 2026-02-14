@@ -18,3 +18,5 @@ export type {
 export { RelayOrchestrator } from "./orchestrator.js";
 export type { RelayOrchestratorOptions } from "./orchestrator.js";
 export { runMcpServer } from "./server.js";
+export { getRoleGuidance, listRoles, ROLE_GUIDANCE, RELAY_ROLE_IDS } from "./roles.js";
+export type { RelayRoleId, RoleGuidance } from "./roles.js";

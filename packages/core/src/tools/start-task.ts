@@ -5,7 +5,7 @@ export function startTaskTool(_wm: WorkflowManager): Tool {
   return {
     name: "start_task",
     description:
-      "Start working on a Jira issue: fetch details, create work session, optionally break into micro-tasks. Suggests Git branch name. Updates Jira to In Progress.",
+      "Start task / Begin work. Start working on a Jira issue: fetch details, create work session, optionally break into micro-tasks. Suggests Git branch name. Updates Jira to In Progress.",
     inputSchema: {
       type: "object",
       properties: {
