@@ -3,9 +3,9 @@ import type { WorkflowManager } from "../workflow-manager.js";
 
 export function updateProgressTool(_wm: WorkflowManager): Tool {
   return {
-    name: "update_progress",
+    name: "log_work",
     description:
-      "Log progress on the current work session: add a note, log time, link a commit, or mark a micro-task done.",
+      "Log work / Update status. Add a note, log time, link a commit, or mark a micro-task done on the current work session.",
     inputSchema: {
       type: "object",
       properties: {

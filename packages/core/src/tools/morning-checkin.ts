@@ -3,9 +3,9 @@ import type { WorkflowManager } from "../workflow-manager.js";
 
 export function morningCheckinTool(_wm: WorkflowManager): Tool {
   return {
-    name: "morning_checkin",
+    name: "whats_up",
     description:
-      "Run a morning check-in: list pending handoffs (from overnight), assigned Jira issues, current Git branch, and recent commits. Recommends priority order.",
+      "What's up? / Status check / Get context. List pending handoffs, assigned Jira issues, current Git branch, and recent commits. Recommends priority order.",
     inputSchema: {
       type: "object",
       properties: {
@@ -38,10 +38,13 @@ export async function runMorningCheckin(
     "### Assigned Jira issues",
     result.assignedIssues.length
       ? result.assignedIssues.map((i) => `- ${i.key}: ${i.summary}`).join("\n")
-      : "None (or Jira not configured).",
+      : result.jiraError
+        ? `None (Jira MCP: ${result.jiraError}).`
+        : "None (or Jira not configured).",
     "",
     "### Git",
     `- Branch: ${result.currentBranch || "N/A"}`,
+    ...(result.gitError ? [`  _${result.gitError}_`] : []),
     result.recentCommits.length
       ? "Recent commits:\n" +
         result.recentCommits.map((c) => `  - ${c.sha.slice(0, 7)} ${c.message}`).join("\n")

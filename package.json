@@ -2,6 +2,9 @@
   "name": "relay",
   "version": "0.1.0",
   "private": true,
+  "bin": {
+    "relay": "./packages/cli/dist/index.js"
+  },
   "description": "AI-powered development workflow system for task handoffs, context preservation, and team coordination",
   "author": "Relay Contributors",
   "license": "MIT",
@@ -25,6 +28,7 @@
     "setup": "node scripts/setup.js",
     "migrate": "node scripts/migrate-db.js",
     "relay": "relay",
+    "checkin": "relay checkin",
     "dev": "npm run build && RELAY_JIRA_MCP_DISABLED=1 RELAY_GIT_MCP_DISABLED=1 RELAY_DB_PATH=/tmp/relay-dev.db node packages/cli/dist/index.js checkin"
   },
   "devDependencies": {

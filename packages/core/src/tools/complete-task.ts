@@ -5,7 +5,7 @@ export function completeTaskTool(_wm: WorkflowManager): Tool {
   return {
     name: "complete_task",
     description:
-      "Complete the current work session: set status to done, optionally link MR/PR URL and total time. Updates Jira to Done.",
+      "Complete task / Finish task. End work session, optionally link MR/PR URL and total time. Updates Jira to Done.",
     inputSchema: {
       type: "object",
       properties: {

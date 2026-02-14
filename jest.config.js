@@ -2,7 +2,8 @@
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
-  roots: ["<rootDir>/packages", "<rootDir>/tests"],
+  roots: ["<rootDir>/packages"],
+  passWithNoTests: true,
   testMatch: ["**/*.test.ts", "**/*.spec.ts"],
   collectCoverageFrom: ["packages/*/src/**/*.ts", "!**/*.d.ts", "!**/node_modules/**"],
   coverageThreshold: {

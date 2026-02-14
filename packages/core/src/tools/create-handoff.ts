@@ -3,9 +3,9 @@ import type { WorkflowManager } from "../workflow-manager.js";
 
 export function createHandoffTool(_wm: WorkflowManager): Tool {
   return {
-    name: "create_handoff",
+    name: "handoff_task",
     description:
-      "Create a handoff to another developer: capture context, what's done, what's next, branch and file list. Marks current work session as handed off.",
+      "Handoff task / Transfer to. Create a handoff to another developer: capture context, what's done, what's next, branch and file list. Marks current work session as handed off.",
     inputSchema: {
       type: "object",
       properties: {
