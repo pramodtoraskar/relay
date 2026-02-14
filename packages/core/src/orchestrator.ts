@@ -56,6 +56,29 @@ export class RelayOrchestrator {
     return this.wm.createHandoff(input);
   }
 
+  /** Add MR link as comment on Jira issue (combined Jira + GitLab before handoff). */
+  async addMrCommentToJira(
+    issueKey: string,
+    mergeRequestUrl: string,
+    extraText?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    return this.wm.addMrCommentToJira(issueKey, mergeRequestUrl, extraText);
+  }
+
+  /** Create Jira sub-task from MR review comments (combined Jira + GitLab). */
+  async createSubtaskFromMrReview(
+    parentIssueKey: string,
+    options: {
+      mergeRequestUrl?: string;
+      projectId?: string;
+      projectName?: string;
+      mrIid?: number;
+      mergeRequestId?: string;
+    }
+  ): Promise<{ subtaskKey?: string; created: boolean; noteCount?: number; error?: string }> {
+    return this.wm.createSubtaskFromMrReview(parentIssueKey, options);
+  }
+
   async endOfDay(devName?: string) {
     return this.wm.endOfDay(devName);
   }

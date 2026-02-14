@@ -20,6 +20,10 @@ export interface IRelayDb {
   getProgressLogs(sessionId: string, limit?: number): Promise<Array<{ id: string; note: string | null; minutes_logged: number; commit_sha: string | null; created_at: string }>>;
   getMicroTasks(sessionId: string): Promise<Array<{ id: string; title: string; status: string; sort_order: number }>>;
   getSession(sessionId: string): Promise<{ id: string; developer_id: string; jira_issue_key: string | null; jira_issue_summary: string | null; branch_name: string | null; status: string; started_at: string } | null>;
+  /** Last ended work session(s) for a developer (for context resurrection). */
+  getLastEndedSessions(developerId: string, limit?: number): Promise<Array<{ id: string; developer_id: string; jira_issue_key: string | null; jira_issue_summary: string | null; branch_name: string | null; status: string; started_at: string; ended_at: string | null }>>;
+  /** Work sessions for a developer (for analytics). */
+  getWorkSessionsForDeveloper(developerId: string, limit?: number): Promise<Array<{ id: string; jira_issue_key: string | null; started_at: string; ended_at: string | null; total_minutes: number | null; status: string }>>;
 }
 
 function parseQueryResult(content: string): { rows?: unknown[] } {
@@ -202,5 +206,39 @@ export class McpDbAdapter implements IRelayDb {
     const { rows } = await this.runQuery(`SELECT id, developer_id, jira_issue_key, jira_issue_summary, branch_name, status, started_at FROM work_sessions WHERE id = ?`, [sessionId]);
     const row = rows?.[0];
     return (row as any) ?? null;
+  }
+
+  async getLastEndedSessions(
+    developerId: string,
+    limit = 5
+  ): Promise<Array<{ id: string; developer_id: string; jira_issue_key: string | null; jira_issue_summary: string | null; branch_name: string | null; status: string; started_at: string; ended_at: string | null }>> {
+    const { rows } = await this.runQuery(
+      `SELECT id, developer_id, jira_issue_key, jira_issue_summary, branch_name, status, started_at, ended_at
+       FROM work_sessions WHERE developer_id = ? AND status != 'active' AND ended_at IS NOT NULL
+       ORDER BY ended_at DESC LIMIT ?`,
+      [developerId, limit]
+    );
+    return (rows ?? []) as Array<{
+      id: string;
+      developer_id: string;
+      jira_issue_key: string | null;
+      jira_issue_summary: string | null;
+      branch_name: string | null;
+      status: string;
+      started_at: string;
+      ended_at: string | null;
+    }>;
+  }
+
+  async getWorkSessionsForDeveloper(
+    developerId: string,
+    limit = 50
+  ): Promise<Array<{ id: string; jira_issue_key: string | null; started_at: string; ended_at: string | null; total_minutes: number | null; status: string }>> {
+    const { rows } = await this.runQuery(
+      `SELECT id, jira_issue_key, started_at, ended_at, total_minutes, status
+       FROM work_sessions WHERE developer_id = ? ORDER BY started_at DESC LIMIT ?`,
+      [developerId, limit]
+    );
+    return (rows ?? []) as Array<{ id: string; jira_issue_key: string | null; started_at: string; ended_at: string | null; total_minutes: number | null; status: string }>;
   }
 }

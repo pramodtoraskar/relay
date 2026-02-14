@@ -364,6 +364,56 @@ export class McpClientsManager {
     return match?.name ?? "git_log";
   }
 
+  /** Resolve Jira MCP tool name for workflow: add comment to issue. */
+  async getJiraAddCommentTool(): Promise<string> {
+    const tools = await this.listJiraTools();
+    const match = tools.find(
+      (t) =>
+        /comment|add_comment|create_comment/i.test(t.name) ||
+        (t.description && /comment.*issue|add.*comment/i.test(t.description))
+    );
+    return match?.name ?? "add_comment";
+  }
+
+  /** Resolve Jira MCP tool name for workflow: create sub-task or create issue. */
+  async getJiraCreateIssueTool(): Promise<string> {
+    const tools = await this.listJiraTools();
+    const subtask = tools.find(
+      (t) =>
+        /subtask|sub_task|create_subtask/i.test(t.name) ||
+        (t.description && /subtask|sub-task/i.test(t.description))
+    );
+    if (subtask) return subtask.name;
+    const create = tools.find(
+      (t) =>
+        /create_issue|create_issue|createIssue/i.test(t.name) ||
+        (t.description && /create.*issue/i.test(t.description))
+    );
+    return create?.name ?? "create_issue";
+  }
+
+  /** Resolve Git/GitLab MCP tool name for workflow: list merge requests. */
+  async getGitLabMergeRequestsTool(): Promise<string> {
+    const tools = await this.listGitTools();
+    const match = tools.find(
+      (t) =>
+        /merge_request|merge request|list_mr|list_merge/i.test(t.name) ||
+        (t.description && /merge request|MR/i.test(t.description))
+    );
+    return match?.name ?? "list_merge_requests";
+  }
+
+  /** Resolve Git/GitLab MCP tool name for workflow: MR notes / review comments / discussions. */
+  async getGitLabMrNotesTool(): Promise<string> {
+    const tools = await this.listGitTools();
+    const match = tools.find(
+      (t) =>
+        /note|comment|discussion|review/i.test(t.name) ||
+        (t.description && /note|comment|discussion|review.*MR/i.test(t.description))
+    );
+    return match?.name ?? "list_merge_request_notes";
+  }
+
   async close(): Promise<void> {
     if (this.jiraTransport) await (this.jiraTransport as any).close?.();
     if (this.gitTransport) await (this.gitTransport as any).close?.();
