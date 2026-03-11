@@ -10,7 +10,7 @@ Get from zero to your first task in about 5 minutes.
 ## 1. Install
 
 ```bash
-git clone https://github.com/relay-dev/relay.git && cd relay
+git clone https://github.com/redhat-community-ai-tools/relay.git && cd relay
 npm install && npm run build && npm run setup
 ```
 

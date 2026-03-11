@@ -309,6 +309,45 @@ export class McpClientsManager {
     }
   }
 
+  /** Full tool list from Jira MCP (name, description, inputSchema) for NL engine. */
+  async listJiraToolsFull(): Promise<Array<{ name: string; description?: string; inputSchema?: Record<string, unknown> }>> {
+    await this.start();
+    if (!this.jiraClient) return [];
+    try {
+      const res = await this.jiraClient.listTools();
+      const list = (res as { tools?: Array<{ name?: string; description?: string; inputSchema?: Record<string, unknown> }> }).tools ?? [];
+      return list.map((t) => ({ name: t.name ?? "", description: t.description, inputSchema: t.inputSchema }));
+    } catch {
+      return [];
+    }
+  }
+
+  /** Full tool list from Git MCP for NL engine. */
+  async listGitToolsFull(): Promise<Array<{ name: string; description?: string; inputSchema?: Record<string, unknown> }>> {
+    await this.start();
+    if (!this.gitClient) return [];
+    try {
+      const res = await this.gitClient.listTools();
+      const list = (res as { tools?: Array<{ name?: string; description?: string; inputSchema?: Record<string, unknown> }> }).tools ?? [];
+      return list.map((t) => ({ name: t.name ?? "", description: t.description, inputSchema: t.inputSchema }));
+    } catch {
+      return [];
+    }
+  }
+
+  /** Full tool list from SQLite MCP for NL engine. */
+  async listDbToolsFull(): Promise<Array<{ name: string; description?: string; inputSchema?: Record<string, unknown> }>> {
+    await this.start();
+    if (!this.dbClient) return [];
+    try {
+      const res = await this.dbClient.listTools();
+      const list = (res as { tools?: Array<{ name?: string; description?: string; inputSchema?: Record<string, unknown> }> }).tools ?? [];
+      return list.map((t) => ({ name: t.name ?? "", description: t.description, inputSchema: t.inputSchema }));
+    } catch {
+      return [];
+    }
+  }
+
   /** Resolve Jira MCP tool name for workflow: search issues (JQL). */
   async getJiraSearchTool(): Promise<string> {
     const tools = await this.listJiraTools();

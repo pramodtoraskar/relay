@@ -28,6 +28,13 @@ import {
   runListRoles,
 } from "./tools/role-tools.js";
 import {
+  createRegistryFromMcp,
+  populateCapabilityMap,
+  LlmClient,
+  chat as nlChat,
+} from "./nl-engine/index.js";
+import type { PlanOutput } from "./nl-engine/index.js";
+import {
   smartHandoffTool,
   runSmartHandoff,
   reviewReadinessTool,
@@ -107,6 +114,18 @@ import {
 } from "./tools/index.js";
 
 const orchestrator = new RelayOrchestrator();
+
+let nlEngine: Awaited<ReturnType<typeof initNlEngine>> | null = null;
+async function initNlEngine() {
+  const registry = createRegistryFromMcp(orchestrator.getMcp());
+  const llm = new LlmClient();
+  await populateCapabilityMap(registry, llm);
+  return { registry, llm };
+}
+async function getNlEngine() {
+  if (!nlEngine) nlEngine = await initNlEngine();
+  return nlEngine;
+}
 
 const morningCheckinBase = {
   ...morningCheckinTool(orchestrator as any),
@@ -260,6 +279,20 @@ const tools = [
       properties: {
         dev_name: { type: "string", description: "Developer id" },
       },
+    },
+  },
+  {
+    name: "relay_chat",
+    description:
+      "NL-routed engine: send a natural language message. Relay routes intent, builds a plan across plugged-in MCPs (Jira, Git, SQLite), executes it, and returns plain English. Use for: status, start task, search issues, git status, etc. Set OPENAI_API_KEY for routing.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        user_message: { type: "string", description: "What the user wants, in natural language" },
+        confirm: { type: "boolean", description: "True when user confirmed a destructive plan; pass plan from prior response" },
+        plan: { type: "object", description: "Plan object from confirmation_required response (when confirm is true)" },
+      },
+      required: ["user_message"],
     },
   },
 ];
@@ -543,6 +576,39 @@ export async function runMcpServer(): Promise<void> {
             `Active session: ${session ? "yes" : "no"}${session ? ` (${session.id})` : ""}`,
             `Pending handoffs: ${handoffs.length}`,
           ].join("\n");
+          break;
+        }
+        case "relay_chat": {
+          const userMessage = (a.user_message as string) ?? "";
+          const confirm = (a.confirm as boolean) ?? false;
+          const planArg = a.plan as PlanOutput | undefined;
+          const { registry, llm } = await getNlEngine();
+          if (!llm.isConfigured()) {
+            text = "NL routing requires an LLM. Set OPENAI_API_KEY (or RELAY_LLM_API_KEY) and optionally OPENAI_BASE_URL, OPENAI_MODEL.";
+            break;
+          }
+          const result = await nlChat(registry, llm, userMessage, {
+            confirm: confirm && planArg ? true : false,
+            plan: planArg,
+          });
+          if (result.type === "clarification") {
+            text = result.message;
+          } else if (result.type === "no_capability") {
+            text = result.suggested_mcp
+              ? `${result.message} Suggested MCP to plug: ${result.suggested_mcp}.`
+              : result.message;
+          } else if (result.type === "confirmation_required") {
+            text = `${result.message}\n\n(Confirm by calling relay_chat again with the same user_message, confirm: true, and plan: <the plan object from this response>.)`;
+          } else if (result.type === "result") {
+            text = result.detail
+              ? `${result.summary}\n\n${result.detail}`
+              : result.summary;
+            if (result.follow_up_suggestions?.length) {
+              text += `\n\nNext: ${result.follow_up_suggestions.join(" or ")}`;
+            }
+          } else {
+            text = `${result.what_happened}\n\nTry: ${result.what_to_try}`;
+          }
           break;
         }
         default:
