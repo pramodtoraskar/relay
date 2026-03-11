@@ -39,7 +39,7 @@ export function learnOutputToCapabilityEntries(
   return learnOutput.enriched_tools.map((t) => ({
     mcp: mcpName,
     tool_id: t.tool_id,
-    tool: t.tool_id.includes(":") ? t.tool_id.split(":")[1]! : t.tool_id,
+    tool: t.tool_id.includes(":") ? t.tool_id.split(":")[1] ?? t.tool_id : t.tool_id,
     human_intent: t.human_intent,
     action_verbs: t.action_verbs,
     risk_level: t.risk_level,

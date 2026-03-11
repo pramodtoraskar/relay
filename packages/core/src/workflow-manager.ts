@@ -197,7 +197,7 @@ export class WorkflowManager {
     const jql = "assignee = currentUser() AND status != Done ORDER BY updated DESC";
     const searchTool = await this.mcp.getJiraSearchTool();
     const searchArgs = { jql, query: jql, max_results: 20, maxResults: 20, limit: 20 };
-    let jiraRes = await this.mcp.callJiraTool(searchTool, searchArgs);
+    const jiraRes = await this.mcp.callJiraTool(searchTool, searchArgs);
     const assignedIssues = jiraRes.isError ? [] : parseJiraIssues(jiraRes.content);
     const jiraError = jiraRes.isError ? (jiraRes.content || "Unknown error").slice(0, 200) : undefined;
 

@@ -14,7 +14,6 @@ export async function crossTimezoneRelay(
   params: { dev_name?: string; suggest_only?: boolean }
 ): Promise<{ summary: string; suggested_handoff_to?: string; handoff_id?: string; next_steps: string[] }> {
   const devId = params.dev_name ?? defaultDev();
-  const wm = orc.getWorkflowManager();
   const db = orc.getDb();
   const session = await db.getActiveSession(devId);
   const received = await db.getPendingHandoffs(devId);
@@ -198,7 +197,7 @@ export async function storyBreakdownAssistant(orc: RelayOrchestrator, params: { 
 }
 
 // --- 14. Technical Debt Tracker ---
-export async function technicalDebtTracker(orc: RelayOrchestrator): Promise<{ summary: string; created_count: number; next_steps: string[] }> {
+export async function technicalDebtTracker(_orc: RelayOrchestrator): Promise<{ summary: string; created_count: number; next_steps: string[] }> {
   return {
     summary: "Scan repo for TODO/FIXME/HACK (e.g. grep or GitLab file search), then create Jira tech-debt issues per finding.",
     created_count: 0,
@@ -219,7 +218,7 @@ export async function codeQualityGate(orc: RelayOrchestrator, params: { task_id:
 }
 
 // --- 16. Flaky Test Detective ---
-export async function flakyTestDetector(orc: RelayOrchestrator): Promise<{ summary: string; next_steps: string[] }> {
+export async function flakyTestDetector(_orc: RelayOrchestrator): Promise<{ summary: string; next_steps: string[] }> {
   return {
     summary: "Integrate with CI to track intermittent failures. Use pipeline failure history and create Jira issues for flaky tests.",
     next_steps: ["Use query_gitlab list_pipelines / list_jobs for failure data", "Create Jira issues for recurring failures"],
@@ -230,8 +229,8 @@ export async function flakyTestDetector(orc: RelayOrchestrator): Promise<{ summa
 export async function mergeConflictPredictor(orc: RelayOrchestrator, params: { task_id: string; dev_name?: string }): Promise<{ summary: string; conflict_risk: string; overlapping: string[]; next_steps: string[] }> {
   const db = orc.getDb();
   const devId = params.dev_name ?? defaultDev();
-  const session = await db.getActiveSession(devId);
-  const others = await db.getWorkSessionsForDeveloper(devId, 1);
+  const _session = await db.getActiveSession(devId);
+  const _others = await db.getWorkSessionsForDeveloper(devId, 1);
   return {
     summary: "Check GitLab for branches touching same files. Coordinate with other assignees on the project.",
     conflict_risk: "unknown",
@@ -309,7 +308,7 @@ export async function deployImpactAnalyzer(orc: RelayOrchestrator, params: { ver
 }
 
 // --- 22. Rollback Recommender ---
-export async function rollbackRecommender(orc: RelayOrchestrator): Promise<{ summary: string; next_steps: string[] }> {
+export async function rollbackRecommender(_orc: RelayOrchestrator): Promise<{ summary: string; next_steps: string[] }> {
   return {
     summary: "Link to monitoring/APM to detect error spikes. If rollback needed, identify last deploy and revert.",
     next_steps: ["Check GitLab pipeline for last successful deploy", "Use query_gitlab for commit history"],
@@ -428,7 +427,7 @@ export async function workLifeBalanceMonitor(orc: RelayOrchestrator, params: { d
 }
 
 // --- 32. Smart Task Recommender ---
-export async function smartTaskRecommender(orc: RelayOrchestrator, params: { dev_name?: string }): Promise<{ summary: string; suggested_tasks: string[]; next_steps: string[] }> {
+export async function smartTaskRecommender(orc: RelayOrchestrator, _params: { dev_name?: string }): Promise<{ summary: string; suggested_tasks: string[]; next_steps: string[] }> {
   const wm = orc.getWorkflowManager();
   const backlog = await wm.searchJira("assignee = currentUser() AND status in (Backlog, \"To Do\") ORDER BY priority DESC", 10);
   return {
@@ -439,7 +438,7 @@ export async function smartTaskRecommender(orc: RelayOrchestrator, params: { dev
 }
 
 // --- 33. Code Pattern Learner ---
-export async function codePatternLearner(orc: RelayOrchestrator, params: { task_id?: string }): Promise<{ summary: string; next_steps: string[] }> {
+export async function codePatternLearner(_orc: RelayOrchestrator, _params: { task_id?: string }): Promise<{ summary: string; next_steps: string[] }> {
   return {
     summary: "Review past MR comments for your common patterns. Add a pre-commit checklist from recurring feedback.",
     next_steps: ["Use review_readiness_check before submitting", "Address recurring review comments"],
@@ -493,7 +492,7 @@ export async function complianceChecker(orc: RelayOrchestrator, params: { task_i
 }
 
 // --- 38. Dependency Vulnerability Scanner ---
-export async function dependencyVulnerabilityScanner(orc: RelayOrchestrator): Promise<{ summary: string; next_steps: string[] }> {
+export async function dependencyVulnerabilityScanner(_orc: RelayOrchestrator): Promise<{ summary: string; next_steps: string[] }> {
   return {
     summary: "Scan package.json/requirements.txt (e.g. npm audit, pip-audit). Create Jira security issues for known vulnerabilities.",
     next_steps: ["Run npm audit or pip-audit", "Create Jira issues for high/critical"],

@@ -27,7 +27,7 @@ function resolveInputs(
     } else {
       const match = source.match(/step_(\d+)_output/);
       if (match) {
-        const stepNum = parseInt(match[1]!, 10);
+        const stepNum = parseInt(match[1], 10);
         out[field] = stepOutputs[stepNum];
       } else {
         out[field] = stepOutputs[parseInt(source.replace(/\D/g, ""), 10)];

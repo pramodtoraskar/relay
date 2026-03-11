@@ -2,7 +2,7 @@
 import { runMcpServer } from "./server.js";
 
 // Prevent unhandled rejections from closing the MCP connection (e.g. subprocess failures)
-process.on("unhandledRejection", (reason, promise) => {
+process.on("unhandledRejection", (reason, _promise) => {
   console.error("Unhandled rejection:", reason);
 });
 
