@@ -14,7 +14,7 @@ Create a branch from `main` (or the current release branch), make your changes, 
 ## Development setup
 
 ```bash
-git clone https://github.com/relay-dev/relay.git
+git clone https://github.com/redhat-community-ai-tools/relay.git
 cd relay
 npm install
 npm run build

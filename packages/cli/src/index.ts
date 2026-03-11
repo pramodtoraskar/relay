@@ -4,7 +4,15 @@ import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
 import inquirer from "inquirer";
-import { McpClientsManager, McpDbAdapter, WorkflowManager } from "@relay/core";
+import {
+  McpClientsManager,
+  McpDbAdapter,
+  WorkflowManager,
+  createRegistryFromMcp,
+  populateCapabilityMap,
+  LlmClient,
+  nlChat,
+} from "@relay/core";
 
 const mcp = new McpClientsManager();
 const db = new McpDbAdapter(mcp);
@@ -222,6 +230,52 @@ program
         console.log(chalk.cyan("Pending handoffs:"));
         result.pendingHandoffs.forEach((h: { title: string }) => console.log(chalk.gray(`  • ${h.title}`)));
       }
+    } finally {
+      await mcp.close();
+    }
+  });
+
+program
+  .command("chat <message>")
+  .description("NL-routed: send a natural language message. Relay routes intent and runs tools (Jira, Git, SQLite). Requires OPENAI_API_KEY.")
+  .action(async (message: string) => {
+    const spinner = ora("Routing...").start();
+    try {
+      await mcp.start();
+      const registry = createRegistryFromMcp(mcp);
+      const llm = new LlmClient();
+      if (!llm.isConfigured()) {
+        spinner.fail("LLM not configured");
+        console.log(chalk.yellow("Set OPENAI_API_KEY (and optionally OPENAI_BASE_URL, OPENAI_MODEL) for natural language routing."));
+        await mcp.close();
+        process.exit(1);
+      }
+      await populateCapabilityMap(registry, llm);
+      spinner.succeed("Ready");
+      const result = await nlChat(registry, llm, message, { sessionContext: {} });
+      if (result.type === "clarification") {
+        console.log(chalk.cyan(result.message));
+      } else if (result.type === "no_capability") {
+        console.log(chalk.yellow(result.message));
+        if (result.suggested_mcp) console.log(chalk.gray(`Suggested MCP: ${result.suggested_mcp}`));
+      } else if (result.type === "confirmation_required") {
+        console.log(chalk.yellow(result.message));
+        console.log(chalk.gray("Re-run with confirmation when supported."));
+      } else if (result.type === "result") {
+        console.log();
+        console.log(result.summary);
+        if (result.detail) console.log(chalk.gray(result.detail));
+        if (result.follow_up_suggestions?.length) {
+          console.log();
+          console.log(chalk.cyan("Next: " + result.follow_up_suggestions.join(" or ")));
+        }
+      } else {
+        console.log(chalk.red(result.what_happened));
+        console.log(chalk.gray("Try: " + result.what_to_try));
+      }
+    } catch (e) {
+      spinner.fail(String(e));
+      process.exit(1);
     } finally {
       await mcp.close();
     }

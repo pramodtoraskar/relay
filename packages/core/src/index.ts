@@ -23,3 +23,17 @@ export type { RelayRoleId, RoleGuidance } from "./roles.js";
 export { BaseOrchestrationTool } from "./lib/base-orchestration-tool.js";
 export * as JiraState from "./lib/jira-state.js";
 export type { JiraIssueState, ResolvedTaskContext, StateValidationResult, JiraTransitionIntent } from "./types/orchestration-tools.js";
+
+export {
+  createRegistryFromMcp,
+  populateCapabilityMap,
+  LlmClient,
+  chat as nlChat,
+  NlRegistry,
+  runLearn,
+  runRoute,
+  runPlan,
+  runExecute,
+  runNarrate,
+} from "./nl-engine/index.js";
+export type { ChatResult, ChatOptions, PlanOutput, IMcpAdapter } from "./nl-engine/index.js";

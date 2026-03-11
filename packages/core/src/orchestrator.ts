@@ -100,6 +100,11 @@ export class RelayOrchestrator {
     return this.db;
   }
 
+  /** Expose MCP clients for NL engine (Registry adapters, list tools). */
+  getMcp(): McpClientsManager {
+    return this.mcp;
+  }
+
   /** Expose workflow manager for role-aware tools (role_aware_checkin, suggest_next). */
   getWorkflowManager(): WorkflowManager {
     return this.wm;
